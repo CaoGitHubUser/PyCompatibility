@@ -2,7 +2,6 @@
 This is a script to run all the tests.
 """
 
-import logging
 import os
 import re
 import subprocess
@@ -10,8 +9,8 @@ from typing import List
 
 import log
 
-LOG: logging.Logger = logging.getLogger()
-LOG.setLevel(logging.DEBUG)
+LOG: log.Logger = log.getLogger()
+LOG.setLevel(log.DEBUG)
 log.ensure_color_log()
 
 # TODO: use annotation instead when Python 3.8 EOL
