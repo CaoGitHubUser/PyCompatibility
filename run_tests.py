@@ -33,7 +33,7 @@ def main() -> int:
     LOG.info("Found these test files:\n" "{}".format("\n".join(test_files)))
 
     LOG.info("Running checks...")
-    command: List[str] = ["python", "-m", "unittest"] + test_files
+    command: List[str] = ["python", "-m", "unittest", "--verbose"] + test_files
     exitcode: int = subprocess.run(command).returncode
 
     return exitcode
