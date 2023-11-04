@@ -24,7 +24,7 @@ Run `Compat <subcommand> --<args>`
 The following flags are always available for all subcommands.
 * `--help`, `-h` - Help command.Print help message for the subcommand.
 * `--configuration-path`, `--cfg` - Path to the configuration file.
-* `--debug`, `--print-log` - Print logs when the program runs.
+* `--debug`, `--print-log` - Print debug messages when the program runs.
 
 ### Help message
 Run `Compat` , `Compat --help` or `Compat -h` to print the help message of this project.
