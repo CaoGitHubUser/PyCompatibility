@@ -74,15 +74,6 @@ Compat check --max-version=8
 # ...
 ```
 
-* Configuration file path: The path to the configuration file  
-CLI flag: `--configuration-path`, `--cfg`  
-Name in configuration file: N/A  
-Required: False  
-Example:
-```shell
-Compat check --configuration-path CompatConfig.toml
-```
-
 * Version: A version range that you want PyCompatibility to check the supporting of it  
 CLI flag: `--version`, `-V`  
 Name in configuration file: `version`  
