@@ -76,7 +76,7 @@ Compat check --max-version=8
 
 * Configuration file path: The path to the configuration file  
 CLI flag: `--configuration-path`, `--cfg`  
-Name in configuration file: N/A
+Name in configuration file: N/A  
 Required: False  
 Example:
 ```shell
@@ -127,7 +127,7 @@ Compat check --exclude ./non_python_scripts/
 * Output: The format of the checking result
 CLI flag: `--output`, `-o`  
 Name in configuration file: `output`  
-Required: False
+Required: False  
 Choice: `text`, `json`  
 **If JSON output is specified, debug mode will be closed as it is not format-able for the JSON result**
 
