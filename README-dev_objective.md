@@ -36,10 +36,14 @@ By default, PyCompatibility will look for the configuration files with the follo
 * `Compat.json`
 * `pyproject.toml`
 
-PyCompatibility currently will only support `.json`, `.toml` and `.yaml`.
+PyCompatibility currently will only support `.json` and `.toml`.
 Specially, configuration in `pyproject.toml` needs to write into the `[tool.PyCompatibility]` section.
 
 If an option provided both in CLI flag and configuration file, CLI option will be used.
+
+### Init
+Run `Compat init` will generate a configuration file with some simple questions.
+Available files to store the configuration are `Compat.json` and `pyproject.toml`
 
 ### Check command
 Run `Compat check` to run the check command.
@@ -53,12 +57,7 @@ Required: True[^1]
 Example:
 ```shell
 Compat check --min-version 8
-Compat check --min-version 3.8
-Compat check --min-version py38
-
-Compat check --min-version=8
-Compat check --min-version=3.8
-Compat check --min-version=py38
+Compat check --min-version "8"
 ```
 These set it to Python 3.8
 
@@ -70,9 +69,7 @@ Example:
 ```shell
 # The syntax is similar to the `--min-version`
 Compat check --max-version 8
-Compat check --max-version 3.8
-Compat check --max-version=8
-# ...
+Compat check --max-version "8"
 ```
 
 * Version: A version range that you want PyCompatibility to check the supporting of it  
@@ -82,21 +79,18 @@ Required: True[^1]
 Example:  
 CLI:
 ```shell
+Compat check -V "8" "10"
 Compat check -V 8 10
-Compat check -V 3.8 3.10
-Compat check -V py38 py310
-
-Compat check -V=8-10
-Compat check -V=3.8-3.10
-Compat check -V=py38-py310
 ```
 Configuration file(pyproject.toml):
 ```toml
 [tool.PyCompatibility]
 version = [8, 10]
-# version = ["py38", "py310"]
-# version = ["3.8", "3.10"]
+# version = ["8", "10"]
 ```
+
+NOTE: The version should greater than or equal the last EOL version,
+and lesser than or equal the newest stable version
 
 * Include: The files that PyCompatibility **should only** check  
 CLI flag: `--include`  

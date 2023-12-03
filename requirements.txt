@@ -1,4 +1,4 @@
-# Typechecker's configuration
+# Project requirements
 #
 # Copyright (C) 2023  Cao Bo Wen
 #
@@ -15,10 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-[tool.mypy]
-strict = true
-implicit_optional = true
-warn_no_return = true
-warn_unreachable = true
-
-show_column_numbers = true
+tomli
+tomli-w
+typing_extensions >= 4.1.0  # TODO: Delete this after EOL: Python 3.10
