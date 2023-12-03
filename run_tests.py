@@ -88,4 +88,4 @@ if __name__ == "__main__":
 
     if args.verbose:
         LOG.setLevel(log.DEBUG)
-    main(args.cov)
+    exit(main(args.cov))
