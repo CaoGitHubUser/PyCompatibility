@@ -29,14 +29,14 @@ jobs:
       matrix:
         python_version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         os: ["windows-latest", "macos-latest", "ubuntu-latest"]
+    runs-on: ${{ matrix.os }}
     env:
       OS_USE: ${{ matrix.os }}
       PYTHON_VERSION: ${{ matrix.python_version }}
-    runs-on: ${{ env.OS_USE }}
     steps:
     - uses: actions/setup-python@main
       with:
-        python-version: ${{ env.PYTHON_VERSION }}
+        python-version: ${{ matrix.python_version }}
 
     - uses: actions/checkout@main
 
