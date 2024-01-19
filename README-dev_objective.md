@@ -1,15 +1,20 @@
-<meta content="This is a README that this project WILL be in FUTURE.
+<meta content="This is a README that this project WILL BE IN FUTURE.
 The feature that implemented will add to /README.md">
+<meta content="
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without any warranty.
+">
 
 # PyCompatibility
 
-**_PyCompatibility is a Python version compatibility checker._**
+**_PyCompatibility is a static Python version compatibility checker._**
 
 ## Installation
 
 ### Current version build
-1. Download the zip archive in the [project release page](https://github.com/CaoGitHubUser/PyCompatibility/releases)
-2. Run `pip install .`
+Run `pip install PyCompatibility` or `pip install PyCompatibility=X.X` for specified version.
 
 ### Development release build
 1. Clone this repository.
@@ -22,13 +27,14 @@ Run `Compat <subcommand> --<args>`
 
 ### Common arguments
 The following flags are always available for all subcommands.
-* `--help`, `-h` - Help command.Print help message for the subcommand.
+* `--help` or `-h` - Help command.Print help message for the subcommand.
 * `--configuration-path`, `--cfg` - Path to the configuration file.
-* `--debug` - Print debug messages when the program runs.  
-Name in configuration file: `debug`
+* `--log-level` - The logging level.Logs lesser than this level will not be logged. CLI only.
+* `--color` / `--no-color` - Colorful output. Default is true. CLI only.
+* `--version` - Show the version of this program and exit.
 
 ### Help message
-Run `Compat` , `Compat --help` or `Compat -h` to print the help message of this project.
+Run `Compat`, `Compat --help` or `Compat -h` to print the help message of this project.
 Run `Compat <subcommand> --help` or `Compat <subcommand> -h` to print the help message of the subcommand.
 
 ### Configuration
@@ -46,7 +52,7 @@ Run `Compat init` will generate a configuration file with some simple questions.
 Available files to store the configuration are `Compat.json` and `pyproject.toml`
 
 ### Check command
-Run `Compat check` to run the check command.
+Run `Compat check INCLUDE` to run the check command.
 
 Flags available:
 
@@ -89,17 +95,8 @@ version = [8, 10]
 # version = ["8", "10"]
 ```
 
-NOTE: The version should greater than or equal the last EOL version,
-and lesser than or equal the newest stable version
-
-* Include: The files that PyCompatibility **should only** check  
-CLI flag: `--include`  
-Name in configuration file: `include`  
-Required: False  
-Example:
-```shell
-Compat check --include ./python_scripts/
-```
+NOTE: The version should be greater than or equal the last EOL version,
+and lesser than or equal the latest stable version
 
 * Exclude: The files that PyCompatibility **will not** check  
 CLI flag: `--exclude`  
@@ -107,15 +104,14 @@ Name in configuration file: `exclude`
 Required: False  
 Example:
 ```shell
-Compat check --exclude ./non_python_scripts/
+Compat check --exclude ./non_python_scripts/ ---exclude ./other_non_python_scripts/
 ```
 
-* Output: The format of the checking result
-CLI flag: `--output`, `-o`  
-Name in configuration file: `output`  
+* Report: The path to the file to write the JSON check report  
+CLI flag: `--report`, `-o`  
+Name in configuration file: `report`  
 Required: False  
-Choice: `text`, `json`  
-**If JSON output is specified, debug mode will be closed as it is not format-able for the JSON result**
+**If report is not specified, the JSON output will be formatted and print to stdout**
 
 [^1]: If `Version` is provided, `Min version` and `Max version` will not be required.
 Also, if `Min version` and `Max version` are provided, `Version` will not be required.

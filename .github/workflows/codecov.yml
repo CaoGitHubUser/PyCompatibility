@@ -1,28 +1,28 @@
-# GitHub workflow to run tests.
+# GitHub workflow to get and update the coverage report.
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
 # notice and this notice are preserved.  This file is offered as-is,
 # without any warranty.
 
-name: build & test
+name: codecov
 
 on:
   pull_request:
   push:
     branches: [ "main" ]
-  workflow_dispatch:
-  schedule:
-    - cron: "0 0 * * 0"
 
 jobs:
-  unittest:
+  coverage:
     strategy:
       fail-fast: false
       matrix:
         python_version: ["3.8", "pypy3.8", "3.9", "pypy3.9", "3.10", "pypy3.10", "3.11", "3.12"]
         os: ["windows-latest", "macos-latest", "ubuntu-latest"]
     runs-on: ${{ matrix.os }}
+    env:
+      OS_USE: ${{ matrix.os }}
+      PYTHON_VERSION: ${{ matrix.python_version }}
     steps:
     - uses: actions/setup-python@main
       with:
@@ -30,8 +30,19 @@ jobs:
 
     - uses: actions/checkout@main
 
-    - name: Build test & Install dependencies
-      run: pip install .
+    - name: Build & Install dependencies
+      run: |
+        pip install .
+        pip install -r requirements-dev.txt
 
-    - name: Run tests
-      run: python run_tests.py --verbose --no-color
+    - name: Generate coverage report
+      run: |
+        python run_tests.py --verbose --cov --no-color
+        coverage xml
+
+    - name: Upload coverage report
+      uses: codecov/codecov-action@main
+      with:
+        files: ./coverage.xml
+        token: ${{ secrets.CODECOV_TOKEN }}
+        env_vars: OS_USE,PYTHON_VERSION

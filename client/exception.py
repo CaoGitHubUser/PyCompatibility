@@ -1,7 +1,7 @@
 """
 BaseException, Exception, Warning ans some useful exception tools for the whole program
 
-Copyright (C) 2023  Cao Bo Wen
+Copyright (C) 2023-2024  Bo Wen Cao
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,9 +17,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import logging
 from typing import Optional, Type, Union
-
-from . import log
 
 
 class BasePyCompatibilityException(BaseException):
@@ -34,7 +33,7 @@ class PyCompatibilityWarning(Warning, BasePyCompatibilityException):
     pass
 
 
-def static_assert(
+def assert_exc(
     assertion: bool,
     exc: Union[Type[Exception], Exception] = PyCompatibilityException,
     msg: str = "",
@@ -53,9 +52,12 @@ def warn(
     message: Union[str, Warning],
     category: Optional[Type[Warning]] = None,
     stacklevel: int = 1,
+    logger: logging.Logger = logging.root,
 ) -> None:
     if isinstance(message, Warning):
         category = message.__class__
     else:
         category = category or UserWarning
-    log.warning(f"{category.__name__}: {str(message)}", stacklevel=stacklevel)
+    logger.warning(
+        f"{category.__name__}: {str(message)}", stacklevel=stacklevel
+    )

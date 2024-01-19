@@ -1,7 +1,7 @@
 """
 Tests for log.py
 
-Copyright (C) 2023  Cao Bo Wen
+Copyright (C) 2023-2024  Bo Wen Cao
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,12 +19,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import contextlib
 import io
+import logging
 import unittest
 from typing import Any, Generator, Optional
 
 from .. import log
 
-from ..exception import static_assert
+from ..exception import assert_exc
+
+LOG: logging.Logger = logging.getLogger("test_logging")
 
 
 @contextlib.contextmanager
@@ -35,14 +38,16 @@ def redirect_log_with_config(
     if buf is None:
         buf = io.StringIO()
     kwargs["stream"] = buf
-    static_assert(not color or not basic, ValueError("color and basic were both True!"))
+    assert_exc(
+        not color or not basic, ValueError("color and basic were both True!")
+    )
     kwargs["force"] = True
     if color:
         log.config_with_colored_handler(**kwargs)
     elif not basic:
         log.config_with_formatted_handler(**kwargs)
     else:
-        log.basicConfig(**kwargs)
+        logging.basicConfig(**kwargs)
 
     try:
         yield buf
@@ -52,31 +57,69 @@ def redirect_log_with_config(
 
 class CheckFormattedStreamHandler(unittest.TestCase):
     def test_debug(self) -> None:
-        with redirect_log_with_config(level=log.DEBUG) as buf:
-            log.debug("A debug message")
-            self.assertEqual(buf.getvalue(), "[Debug] A debug message\n")
+        with redirect_log_with_config(level=logging.DEBUG) as buf:
+            LOG.debug("A debug message")
+            self.assertEqual(
+                buf.getvalue(), "[Debug] test_logging: A debug message\n"
+            )
 
     def test_info(self) -> None:
-        with redirect_log_with_config(level=log.INFO) as buf:
-            log.info("An info message")
-            self.assertEqual(buf.getvalue(), "[Info] An info message\n")
+        with redirect_log_with_config(level=logging.INFO) as buf:
+            LOG.info("An info message")
+            self.assertEqual(
+                buf.getvalue(), "[Info] test_logging: An info message\n"
+            )
 
     def test_warning(self) -> None:
         with redirect_log_with_config() as buf:
-            log.warning("A warning message")
-            self.assertEqual(buf.getvalue(), "[Warning] A warning message\n")
+            LOG.warning("A warning message")
+            self.assertEqual(
+                buf.getvalue(), "[Warning] test_logging: A warning message\n"
+            )
 
     def test_error(self) -> None:
         with redirect_log_with_config() as buf:
-            log.error("An error message")
-            self.assertEqual(buf.getvalue(), "[Error] An error message\n")
+            LOG.error("An error message")
+            self.assertEqual(
+                buf.getvalue(), "[Error] test_logging: An error message\n"
+            )
 
     def test_critical(self) -> None:
         with redirect_log_with_config() as buf:
-            log.critical("An critical error message")
-            self.assertEqual(buf.getvalue(), "Fatal error: An critical error message\n")
+            LOG.critical("An critical error message")
+            self.assertEqual(
+                buf.getvalue(),
+                "Fatal error: test_logging: An critical error message\n",
+            )
 
     def test_no_level(self) -> None:
         with redirect_log_with_config() as buf:
-            log.log(35, "This will logged as is")
-            self.assertEqual(buf.getvalue(), "This will logged as is\n")
+            LOG.log(35, "This will logged as is")
+            self.assertEqual(
+                buf.getvalue(), "test_logging: This will logged as is\n"
+            )
+
+    def test_initialize(self) -> None:
+        for h in logging.root.handlers:
+            logging.root.removeHandler(h)
+            h.close()
+        buf = io.StringIO()
+        log.initialize("DEBUG", False, buf)
+
+        log.initialize("ERROR", True)
+        self.assertEqual(
+            buf.getvalue(), "[Debug] log: Already initialized, skipping.\n"
+        )
+
+        log.success("A record with level SUCCESS", logger=LOG)
+        self.assertEqual(
+            buf.getvalue(),
+            "[Debug] log: Already initialized, skipping.\n"
+            "[Success] test_logging: A record with level SUCCESS\n",
+        )
+
+        for h in logging.root.handlers:
+            logging.root.removeHandler(h)
+            h.close()
+        buf.close()
+        logging.basicConfig(level="INFO")

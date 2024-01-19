@@ -1,7 +1,7 @@
 """
 Defines ANSI escape code colors
 
-Copyright (C) 2023  Cao Bo Wen
+Copyright (C) 2023-2024  Bo Wen Cao
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

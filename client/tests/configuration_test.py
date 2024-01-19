@@ -1,7 +1,7 @@
 """
 Tests for configuration.py
 
-Copyright (C) 2023  Cao Bo Wen
+Copyright (C) 2023-2024  Bo Wen Cao
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ from pathlib import Path
 
 from ..configuration import (
     CheckConfiguration,
+    ParseConfigurationError,
     ReadConfigurationError,
     WriteConfigurationError,
 )
@@ -31,19 +32,18 @@ from .test_logging import redirect_log_with_config
 
 class TestWriteCheckConfiguration(unittest.TestCase):
     origin_configuration: CheckConfiguration = CheckConfiguration(
-        False, 8, 10, "text", (), ()
+        8, 10, Path("report.json"), set(), set()
     )
 
     def test_serialize(self) -> None:
         self.assertEqual(
             self.origin_configuration.serialize(),
             {
-                "debug": False,
                 "min_version": 8,
                 "max_version": 10,
-                "output": "text",
-                "include": (),
-                "exclude": (),
+                "report": Path("report.json"),
+                "include": set(),
+                "exclude": set(),
             },
         )
 
@@ -53,13 +53,11 @@ class TestWriteCheckConfiguration(unittest.TestCase):
             self.origin_configuration.to_file(tmp_root / "Compat.toml")
             self.assertEqual(
                 (tmp_root / "Compat.toml").read_text(encoding="UTF-8"),
-                "debug = false"
-                + "\n"
-                + "min_version = 8"
+                "min_version = 8"
                 + "\n"
                 + "max_version = 10"
                 + "\n"
-                + 'output = "text"'
+                + 'report = "report.json"'
                 + "\n"
                 + "include = []"
                 + "\n"
@@ -75,8 +73,6 @@ class TestWriteCheckConfiguration(unittest.TestCase):
                 (tmp_root / "Compat.json").read_text(encoding="UTF-8"),
                 "{"
                 + "\n"
-                + '    "debug": false,'
-                + "\n"
                 + '    "exclude": [],'
                 + "\n"
                 + '    "include": [],'
@@ -85,7 +81,7 @@ class TestWriteCheckConfiguration(unittest.TestCase):
                 + "\n"
                 + '    "min_version": 8,'
                 + "\n"
-                + '    "output": "text"'
+                + '    "report": "report.json"'
                 + "\n"
                 + "}",
             )
@@ -93,7 +89,9 @@ class TestWriteCheckConfiguration(unittest.TestCase):
     def test_to_pyproject(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_root: Path = Path(tmp)
-            with open(tmp_root / "pyproject.toml", mode="w", encoding="UTF-8") as fp:
+            with open(
+                tmp_root / "pyproject.toml", mode="w", encoding="UTF-8"
+            ) as fp:
                 fp.write("[tool.other_tools]" "\n" "other_cfg = []" "\n")
             self.origin_configuration.to_file(tmp_root / "pyproject.toml")
             self.assertEqual(
@@ -104,13 +102,11 @@ class TestWriteCheckConfiguration(unittest.TestCase):
                 + "\n\n"
                 + "[tool.PyCompatibility]"
                 + "\n"
-                + "debug = false"
-                + "\n"
                 + "min_version = 8"
                 + "\n"
                 + "max_version = 10"
                 + "\n"
-                + 'output = "text"'
+                + 'report = "report.json"'
                 + "\n"
                 + "include = []"
                 + "\n"
@@ -128,19 +124,46 @@ class TestWriteCheckConfiguration(unittest.TestCase):
 
 
 class TestReadCheckConfiguration(unittest.TestCase):
-    expected_result: CheckConfiguration = CheckConfiguration(
-        True,
+    _expected_result: CheckConfiguration = CheckConfiguration(
         8,
         10,
-        "json",
-        (Path("is_python_script/"),),
-        (Path("not_python_script/"),),
+        Path("report.json"),
+        {Path("is_python_script/")},
+        {Path("not_python_script/")},
     )
+    _json_config: str = """\
+    {
+        "min_version": 8,
+        "max_version": 10,
+        "include": [
+            "is_python_script/"
+        ],
+        "exclude": [
+            "not_python_script/"
+        ],
+        "report": "report.json"
+    }
+    """
+    _pyproject_config: str = """\
+    [tool.PyCompatibility]
+    min_version = 8
+    max_version = 10
+    include = ["is_python_script/"]
+    exclude = ["not_python_script/"]
+    report = "report.json"
+    """
+    _toml_config: str = """\
+    min_version = 8
+    max_version = 10
+    include = ["is_python_script/"]
+    exclude = ["not_python_script/"]
+    report = "report.json"
+    """
 
     def test_default(self) -> None:
         self.assertEqual(
-            CheckConfiguration.from_dict({"min_version": "8", "max_version": "10"}),
-            CheckConfiguration(False, 8, 10, "text", (), ()),
+            CheckConfiguration.from_dict({}),
+            CheckConfiguration(None, None, None, set(), set()),
         )
 
     def test_from_dict(self) -> None:
@@ -151,87 +174,59 @@ class TestReadCheckConfiguration(unittest.TestCase):
                     "max_version": 10,
                     "include": ["is_python_script/"],
                     "exclude": ["not_python_script/"],
-                    "output": "json",
-                    "debug": True,
+                    "report": "report.json",
                 }
             ),
-            self.expected_result,
+            self._expected_result,
         )
 
-    def test_from_version_list(self) -> None:
+    def test_from_version_range(self) -> None:
         self.assertEqual(
             CheckConfiguration.from_dict(
                 {
                     "version": ["8", "10"],
                     "include": ["is_python_script/"],
                     "exclude": ["not_python_script/"],
-                    "output": "json",
-                    "debug": True,
+                    "report": "report.json",
                 }
             ),
-            self.expected_result,
+            self._expected_result,
         )
 
     def test_from_json(self) -> None:
-        json_config: str = """\
-        {
-            "min_version": 8,
-            "max_version": 10,
-            "include": [
-                "is_python_script/"
-            ],
-            "exclude": [
-                "not_python_script/"
-            ],
-            "output": "json",
-            "debug": true
-        }
-        """
         with tempfile.TemporaryDirectory() as tmp:
             tmp_root: Path = Path(tmp)
-
-            with open(tmp_root / "Compat.json", mode="w", encoding="UTF-8") as fp:
-                fp.write(json_config)
+            with open(
+                tmp_root / "Compat.json", mode="w", encoding="UTF-8"
+            ) as fp:
+                fp.write(self._json_config)
             self.assertEqual(
                 CheckConfiguration.from_file(tmp_root / "Compat.json"),
-                self.expected_result,
+                self._expected_result,
             )
 
     def test_from_toml(self) -> None:
-        toml_config: str = """\
-        min_version = 8
-        max_version = 10
-        include = ["is_python_script/"]
-        exclude = ["not_python_script/"]
-        output = "json"
-        debug = true
-        """
         with tempfile.TemporaryDirectory() as tmp:
             tmp_root: Path = Path(tmp)
-            with open(tmp_root / "Compat.toml", mode="w", encoding="UTF-8") as fp:
-                fp.write(toml_config)
+            with open(
+                tmp_root / "Compat.toml", mode="w", encoding="UTF-8"
+            ) as fp:
+                fp.write(self._toml_config)
             self.assertEqual(
                 CheckConfiguration.from_file(tmp_root / "Compat.toml"),
-                self.expected_result,
+                self._expected_result,
             )
 
     def test_from_pyproject(self) -> None:
-        pyproject_config: str = """\
-        [tool.PyCompatibility]
-        min_version = 8
-        max_version = 10
-        include = ["is_python_script/"]
-        exclude = ["not_python_script/"]
-        output = "json"
-        debug = true
-        """
         with tempfile.TemporaryDirectory() as tmp:
             tmp_root: Path = Path(tmp)
-            with open(tmp_root / "pyproject.toml", mode="w", encoding="UTF-8") as fp:
-                fp.write(pyproject_config)
+            with open(
+                tmp_root / "pyproject.toml", mode="w", encoding="UTF-8"
+            ) as fp:
+                fp.write(self._pyproject_config)
             self.assertEqual(
                 CheckConfiguration.from_file(tmp_root / "pyproject.toml"),
-                self.expected_result,
+                self._expected_result,
             )
 
     def test_invalid_configuration_file_type(self) -> None:
@@ -239,12 +234,124 @@ class TestReadCheckConfiguration(unittest.TestCase):
             tmp_root: Path = Path(tmp)
             Path.touch(tmp_root / "config.invalid_file_extension")
             with self.assertRaises(ReadConfigurationError):
-                CheckConfiguration.from_file(tmp_root / "config.invalid_file_extension")
+                CheckConfiguration.from_file(
+                    tmp_root / "config.invalid_file_extension"
+                )
+
+    def test_discover_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root: Path = Path(tmp)
+            with open(
+                tmp_root / "Compat.json", mode="w", encoding="UTF-8"
+            ) as fp:
+                fp.write(self._json_config)
+            self.assertEqual(
+                CheckConfiguration.discover(tmp_root), self._expected_result
+            )
+
+    def test_discover_pyproject(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root: Path = Path(tmp)
+            with open(
+                tmp_root / "pyproject.toml", mode="w", encoding="UTF-8"
+            ) as fp:
+                fp.write(self._pyproject_config)
+            self.assertEqual(
+                CheckConfiguration.discover(tmp_root), self._expected_result
+            )
+
+    def test_no_configuration_discovered(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(CheckConfiguration.discover(Path(tmp)), None)
 
     def test_unused_configuration_warning(self) -> None:
         with redirect_log_with_config() as buf:
-            CheckConfiguration.from_dict({"version": ["8", "10"], "unused": "unused"})
+            CheckConfiguration.from_dict(
+                {"version": ["8", "10"], "unused": "unused"}
+            )
             self.assertEqual(
                 buf.getvalue(),
-                "[Warning] UnusedConfigurationWarning: Unused configuration: unused\n",
+                "[Warning] configuration: UnusedConfigurationWarning: Unused configuration: unused\n",
+            )
+
+    def test_configuration_file_path_not_a_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root: Path = Path(tmp)
+            with self.assertRaises(ReadConfigurationError):
+                CheckConfiguration.from_file(tmp_root / "not_exist.json")
+            with self.assertRaises(ReadConfigurationError):
+                (tmp_root / "a_dir").mkdir()
+                CheckConfiguration.from_file(tmp_root / "a_dir")
+
+    def test_no_pyproject_section(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root: Path = Path(tmp)
+            pyproject_path: Path = tmp_root / "pyproject.toml"
+            with open(pyproject_path, mode="w", encoding="UTF-8") as fp:
+                fp.write(
+                    """\
+                    min_version=8
+                    max_version = 10
+                    include = ["is_python_script/"]
+                    exclude = ["not_python_script/"]
+                    report = "report.json"
+                    """
+                )
+            with self.assertRaises(ParseConfigurationError):
+                CheckConfiguration.from_file(pyproject_path)
+
+    def test_no_pyproject_section_in_discovery(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root: Path = Path(tmp)
+            (tmp_root / "pyproject.toml").touch()
+            self.assertEqual(CheckConfiguration.discover(tmp_root), None)
+
+    def test_check_and_resolve(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root: Path = Path(tmp)
+            (tmp_root / "pyfile1.py").touch()
+            (tmp_root / "pyfile_dir1").mkdir()
+            (tmp_root / "pyfile_dir2").mkdir()
+            (tmp_root / "pyfile_dir1" / "pyfile2.py").touch()
+            (tmp_root / "pyfile_dir2" / "pyfile3.py").touch()
+            (tmp_root / "pyfile4.py").touch()
+            (tmp_root / "report.json").touch()
+
+            # min_version not an integer
+            with self.assertRaises(ParseConfigurationError):
+                CheckConfiguration(
+                    None, 10, None, set(), set()
+                ).check_and_resolve()
+
+            # min_version > max_version
+            with self.assertRaises(ParseConfigurationError):
+                CheckConfiguration(
+                    13, 10, None, set(), set()
+                ).check_and_resolve()
+
+            # Path resolving
+            self.assertEqual(
+                CheckConfiguration(
+                    8,
+                    10,
+                    tmp_root / "report.json",
+                    {
+                        tmp_root / "pyfile1.py",
+                        tmp_root / "pyfile_dir1" / "pyfile2.py",
+                        tmp_root / "pyfile_dir2",
+                    },
+                    {tmp_root / "pyfile_dir1", tmp_root / "pyfile4.py"},
+                ).check_and_resolve(),
+                CheckConfiguration(
+                    8,
+                    10,
+                    (tmp_root / "report.json").resolve(strict=True),
+                    {
+                        (tmp_root / "pyfile1.py").resolve(strict=True),
+                        (tmp_root / "pyfile_dir2" / "pyfile3.py").resolve(
+                            strict=True
+                        ),
+                    },
+                    set(),
+                ),
             )

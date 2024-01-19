@@ -1,6 +1,6 @@
-# Typechecker's configuration
+# Project configuration
 #
-# Copyright (C) 2023  Cao Bo Wen
+# Copyright (C) 2023-2024  Bo Wen Cao
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,6 +15,38 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+[project]
+name = "PyCompatibility"
+description = "a static Python version compatibility checker"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {"file" = "LICENSE"}
+authors = [{"name" = "Bo Wen Cao"}]
+keywords = ["python", "python3", "compatibility-testing", "static-checks"]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Topic :: Software Development",
+    "Typing :: Typed"
+]
+dependencies = ["click", "tomli", "tomli-w"]
+version = "0.0.0"
+
+[project.scripts]
+Compat = "client.main:main"
+
 [tool.mypy]
 strict = true
 implicit_optional = true
@@ -22,3 +54,6 @@ warn_no_return = true
 warn_unreachable = true
 
 show_column_numbers = true
+
+[tool.black]
+line-length = 80

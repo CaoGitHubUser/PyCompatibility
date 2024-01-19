@@ -1,7 +1,7 @@
 """
 Defines Read/Write configuration of the PyCompatibility and the configuration exceptions
 
-Copyright (C) 2023  Cao Bo Wen
+Copyright (C) 2023-2024  Bo Wen Cao
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,20 +19,26 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import dataclasses
 import json
+import logging
+import os
 from pathlib import Path
-from typing import Any, Dict, Literal, Tuple
+from typing import Any, Dict, Optional, Set
 
 import tomli
 import tomli_w
 
 from . import exception
 
+LOG: logging.Logger = logging.getLogger("configuration")
+
 
 class BaseConfigurationException(exception.BasePyCompatibilityException):
     pass
 
 
-class ConfigurationException(Exception, BaseConfigurationException):
+class ConfigurationException(
+    exception.PyCompatibilityException, BaseConfigurationException
+):
     pass
 
 
@@ -48,40 +54,29 @@ class ParseConfigurationError(ValueError, ConfigurationException):
     pass
 
 
-class UnusedConfigurationWarning(UserWarning, BaseConfigurationException):
+class UnusedConfigurationWarning(
+    UserWarning, exception.PyCompatibilityWarning, BaseConfigurationException
+):
     pass
 
 
 @dataclasses.dataclass(frozen=True)
-class Configuration:
-    debug: bool
-
-
-@dataclasses.dataclass(frozen=True)
-class CheckConfiguration(Configuration):
-    min_version: int
-    max_version: int
-    output: Literal["text", "json"]
-    include: Tuple[Path, ...]
-    exclude: Tuple[Path, ...]
+class CheckConfiguration:
+    min_version: Optional[int]
+    max_version: Optional[int]
+    report: Optional[Path]
+    include: Set[Path]
+    exclude: Set[Path]
 
     @classmethod
     def from_dict(cls, dict_config: Dict[str, Any]) -> "CheckConfiguration":
         min_version = dict_config.pop("min_version", None)
         max_version = dict_config.pop("max_version", None)
         version = dict_config.pop("version", None)
-        if min_version is None and max_version is None:
-            exception.static_assert(
-                version is not None,
-                ParseConfigurationError(
-                    "No `min_version` and/or `max_version` specified!"
-                ),
-            )
-            exception.static_assert(
-                isinstance(version, (list, tuple)),
-                ParseConfigurationError("`version` should be a tuple or a list!"),
-            )
-            exception.static_assert(
+        if (min_version is None or max_version is None) and isinstance(
+            version, (list, tuple)
+        ):
+            exception.assert_exc(
                 len(version) == 2,
                 ParseConfigurationError("`version` should have two elements!"),
             )
@@ -89,49 +84,35 @@ class CheckConfiguration(Configuration):
                 min_version = version[0]
             if max_version is None:
                 max_version = version[1]
-        min_version = int(min_version)
-        max_version = int(max_version)
-        exception.static_assert(
-            min_version <= max_version,
-            ParseConfigurationError(
-                "min_version should lesser or equal than max_version"
-            ),
-        )
+        min_version = None if min_version is None else int(min_version)
+        max_version = None if max_version is None else int(max_version)
 
-        debug: bool = dict_config.pop("debug", False)
+        report: Optional[Path] = dict_config.pop("report", None)
+        if report is not None:
+            report = Path(report)
 
-        output: Literal["json", "text"] = dict_config.pop("output", "text")
-        exception.static_assert(
-            output in ("text", "json"),
-            ParseConfigurationError(
-                f"Expected `text` or `json` for argument `output`, got {output}"
-            ),
-        )
-
-        include: Tuple[Path, ...] = tuple(
-            Path(path) for path in dict_config.pop("include", ())
-        )
-        exclude: Tuple[Path, ...] = tuple(
-            Path(path) for path in dict_config.pop("exclude", ())
-        )
+        include = set(Path(path) for path in dict_config.pop("include", ()))
+        exclude = set(Path(path) for path in dict_config.pop("exclude", ()))
 
         if dict_config:
             exception.warn(
                 f"Unused configuration: {' '.join(dict_config.keys())}",
                 UnusedConfigurationWarning,
+                logger=LOG,
             )
 
         return cls(
-            debug=debug,
             min_version=min_version,
             max_version=max_version,
-            output=output,
+            report=report,
             include=include,
             exclude=exclude,
         )
 
     @classmethod
     def from_file(cls, path: Path) -> "CheckConfiguration":
+        if not path.is_file():
+            raise ReadConfigurationError("Configuration path is not a file!")
         # TODO: refactor this into match-case after EOL: Python 3.9
         if path.suffix == ".toml":
             dict_config = tomli.loads(path.read_text(encoding="UTF-8"))
@@ -143,27 +124,42 @@ class CheckConfiguration(Configuration):
             )
 
         if path.name == "pyproject.toml":
-            dict_config = dict_config["tool"]["PyCompatibility"]
+            try:
+                dict_config = dict_config["tool"]["PyCompatibility"]
+            except KeyError:
+                raise ParseConfigurationError(
+                    "No `[tool.PyCompatibility]` section in `pyproject.toml`"
+                )
 
         return cls.from_dict(dict_config)
 
     def serialize(self) -> Dict[str, Any]:
         return {
-            "debug": self.debug,
             "min_version": self.min_version,
             "max_version": self.max_version,
-            "output": self.output,
+            "report": self.report,
             "include": self.include,
             "exclude": self.exclude,
         }
 
     def to_file(self, path: Path) -> None:
         dict_config = self.serialize()
+        # Make it JSON/TOML serializable
+        dict_config["include"] = tuple(dict_config["include"])
+        dict_config["exclude"] = tuple(dict_config["exclude"])
+        dict_config["report"] = str(dict_config["report"])
+
         if path.name == "pyproject.toml":
             with open(path, mode="a", encoding="UTF-8") as fp:
-                if path.read_text(encoding="UTF-8").replace("\r", "\n").endswith("\n"):
+                if (
+                    path.read_text(encoding="UTF-8")
+                    .replace("\r", "\n")
+                    .endswith("\n")
+                ):
                     fp.write("\n")
-                fp.write("[tool.PyCompatibility]\n" f"{tomli_w.dumps(dict_config)}")
+                fp.write(
+                    "[tool.PyCompatibility]\n" f"{tomli_w.dumps(dict_config)}"
+                )
         elif path.suffix == ".json":
             with open(path, mode="w", encoding="UTF-8") as fp:
                 json.dump(dict_config, fp, sort_keys=True, indent=4)
@@ -175,3 +171,78 @@ class CheckConfiguration(Configuration):
                 "PyCompatibility currently only support `.json` and `.toml` configuration file."
                 f"The file you give has suffix {path.suffix}"
             )
+
+    @classmethod
+    def discover(cls, path: Path) -> Optional["CheckConfiguration"]:
+        configuration: Optional["CheckConfiguration"] = None
+        json_config_file = path / "Compat.json"
+        pyproject_config_file = path / "pyproject.toml"
+        if json_config_file.is_file():
+            configuration = cls.from_file(json_config_file)
+        if configuration is None and pyproject_config_file.is_file():
+            toml_config = tomli.loads(
+                pyproject_config_file.read_text(encoding="UTF-8")
+            )
+            try:
+                configuration = cls.from_dict(
+                    toml_config["tool"]["PyCompatibility"]
+                )
+            except KeyError:
+                pass
+        return configuration
+
+    def check_and_resolve(self) -> "CheckConfiguration":
+        if not isinstance(self.min_version, int) or not isinstance(
+            self.max_version, int
+        ):
+            raise ParseConfigurationError(
+                "No min and/or max version specified!"
+            )
+        exception.assert_exc(
+            self.min_version <= self.max_version,
+            ParseConfigurationError(
+                "min_version should less than or equal max_version"
+            ),
+        )
+        include: Set[Path] = set()
+        exclude: Set[Path] = set()
+        for path in self.include:
+            exception.assert_exc(
+                path.exists(),
+                ParseConfigurationError(f"include path {path} doesn't exist!"),
+            )
+            path = path.resolve(strict=True)
+            if path.is_file():
+                include.add(path)
+            else:
+                for dir_path, _, filenames in os.walk(path):
+                    include.update(
+                        Path(f"{dir_path}/{filename}") for filename in filenames
+                    )
+        include = set(path.resolve(strict=True) for path in include)
+
+        for path in self.exclude:
+            exception.assert_exc(
+                path.exists(),
+                ParseConfigurationError(f"exclude path {path} doesn't exist!"),
+            )
+            path = path.resolve(strict=True)
+            if path.is_file():
+                exclude.add(path)
+            else:
+                for dir_path, _, filenames in os.walk(path):
+                    exclude.update(
+                        Path(f"{dir_path}/{filename}") for filename in filenames
+                    )
+        exclude = set(path.resolve(strict=True) for path in exclude)
+        include -= exclude
+
+        if (report := self.report) is not None:
+            report = report.resolve(strict=True)
+        return CheckConfiguration(
+            min_version=self.min_version,
+            max_version=self.max_version,
+            report=report,
+            include=include,
+            exclude=set(),
+        )
