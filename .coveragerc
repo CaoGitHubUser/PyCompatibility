@@ -1,0 +1,16 @@
+# Coverage.py configuration
+#
+# Copying and distribution of this file, with or without modification,
+# are permitted in any medium without royalty provided the copyright
+# notice and this notice are preserved.  This file is offered as-is,
+# without any warranty.
+
+[run]
+omit =
+    # Tests runner
+    run_tests.py
+    # Test scripts
+    **/test_*.py
+    **/*_test.py
+    # CLI, not sense to measure coverage
+    **/client/main.py
