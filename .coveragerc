@@ -14,3 +14,5 @@ omit =
     **/*_test.py
     # CLI, not sense to measure coverage
     **/client/main.py
+
+source = src/PyCompatibility

@@ -35,16 +35,9 @@ jobs:
         pip install .
         pip install -r requirements-dev.txt
 
-    - name: Clean up build files
-      run: |
-        if [ -d build/ ]; then
-          rm -rf build/
-        fi
-      shell: bash
-
     - name: Generate coverage report
       run: |
-        python run_tests.py --verbose --cov --no-color
+        coverage run run_tests.py --verbose
         coverage xml
 
     - name: Upload coverage report

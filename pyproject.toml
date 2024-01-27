@@ -42,12 +42,16 @@ classifiers = [
 dependencies = ["click", "tomli", "tomli-w"]
 description = "a static Python version compatibility checker"
 keywords = ["python", "python3", "compatibility-testing", "static-checks"]
-license = {"file" = "COPYING"}
 readme = "README.md"
 requires-python = ">=3.8"
 
 [project.scripts]
-Compat = "client.main:main"
+Compat = "PyCompatibility.client.main:main"
+
+[project.urls]
+HomePage = "https://github.com/CaoGitHubUser/PyCompatibility"
+Issues = "https://github.com/CaoGitHubUser/PyCompatibility/issues"
+Coverage = "https://app.codecov.io/github/CaoGitHubUser/PyCompatibility"
 
 [tool.mypy]
 strict = true

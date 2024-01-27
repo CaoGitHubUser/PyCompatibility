@@ -17,26 +17,65 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import importlib.metadata
 import logging
-import sys
 from pathlib import Path
-from typing import Optional, Set, Tuple
+from typing import Any, Callable, cast, Optional, Set, Tuple
 
 import click
 
 from . import log
-
 from .configuration import CheckConfiguration
 
-if sys.version_info < (3, 10):
-    import pkg_resources
+__version__: str = importlib.metadata.version("PyCompatibility")
+__license_file__: str = (
+    importlib.metadata.metadata("PyCompatibility").get("License-File")
+    or "COPYING"
+)
+__license__: str = cast(
+    Callable[[str], str],
+    importlib.metadata.distribution("PyCompatibility").read_text,
+)(__license_file__)
 
-    __version__: str = pkg_resources.get_distribution("PyCompatibility").version
-else:
-    import importlib.metadata
-
-    __version__: str = importlib.metadata.version("PyCompatibility")
 LOG: logging.Logger = logging.getLogger("CLI")
+
+DISCLAIMER_OF_WARRANTY: str = """\
+                    Disclaimer of Warranty
+  THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
+APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
+HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM "AS IS" WITHOUT WARRANTY
+OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM
+IS WITH YOU.  SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF
+ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
+"""
+
+# Yes, it is a trick...
+TERMS_AND_CONDITIONS: str = (
+    "                       TERMS AND CONDITIONS"
+    + __license__.split("TERMS AND CONDITIONS")[1].split(
+        "END OF TERMS AND CONDITIONS"
+    )[0]
+    + "END OF TERMS AND CONDITIONS"
+    + "\n"
+)
+
+
+def _print_notice(func: Callable[..., Any]) -> Callable[..., Any]:
+    def decor(*args: Any, **kwargs: Any) -> Any:
+        print(
+            "PyCompatibility  Copyright (C) 2023-2024  Bo Wen Cao" + "\n"
+            "This program comes with ABSOLUTELY NO WARRANTY; for details type `show-license --warranty-disclaimer'."
+            + "\n"
+            "This is free software, and you are welcome to redistribute it"
+            + "\n"
+            "under certain conditions; type `show-license --terms-and-conditions' for details."
+            + "\n"
+        )
+        func(*args, **kwargs)
+
+    return decor
 
 
 @click.group(
@@ -56,6 +95,7 @@ LOG: logging.Logger = logging.getLogger("CLI")
     help="Specify path to the configuration file",
 )
 @click.version_option(version=__version__)
+@_print_notice
 @log.handle_exception
 def main(
     context: click.Context,
@@ -130,7 +170,7 @@ def check(
         log_level or context.obj["configuration"]["log_level"], color
     )
     if configuration_path is None:
-        file_configuration = CheckConfiguration.discover(Path("."))
+        file_configuration = CheckConfiguration.discover(Path(""))
     else:
         file_configuration = CheckConfiguration.from_file(configuration_path)
     include_set: Set[Path] = set(include) if include is not None else set()
@@ -171,3 +211,34 @@ def cleanup(
     context: click.Context, log_level: Optional[str], color: bool
 ) -> None:
     log_level = log_level or context.obj["log_level"] or "INFO"
+
+
+@main.command(name="show-license")
+@click.pass_context
+@click.option(
+    "--log-level",
+    type=str,
+    help="The logging level.Logs lesser than this level will not be logged",
+)
+@click.option("--color/--no-color", default=True, help="Enable colorful output")
+@click.option(
+    "--warranty-disclaimer", is_flag=True, help="Show disclaimer of warranty"
+)
+@click.option(
+    "--terms-and-conditions", is_flag=True, help="Show terms and conditions"
+)
+@log.handle_exception
+def show_license(
+    context: click.Context,
+    log_level: str,
+    color: bool,
+    warranty_disclaimer: bool,
+    terms_and_conditions: bool,
+) -> None:
+    log.initialize(
+        log_level or context.obj["configuration"]["log_level"], color
+    )
+    if terms_and_conditions:
+        click.echo_via_pager(TERMS_AND_CONDITIONS)
+    if warranty_disclaimer:
+        click.echo_via_pager(DISCLAIMER_OF_WARRANTY)
