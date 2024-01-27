@@ -1,5 +1,5 @@
 """
-For pleasing the type checker, not useful
+To please mypy, not useful.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

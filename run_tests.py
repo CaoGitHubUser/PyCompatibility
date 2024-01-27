@@ -20,25 +20,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
 import os
 import re
-import shlex
-import subprocess
-import sys
+import unittest
 from typing import List, Pattern
 
 import click
 
-from client import log
-
 TEST_FILE: Pattern[str] = re.compile(r"(test_(.*).py)|((.*)_test.py)")
 LOG: logging.Logger = logging.getLogger("tests_runner")
 UNIX_CWD: str = os.getcwd().replace("\\", "/")
-CURRENT_DIR_NAME: str = os.path.split(UNIX_CWD)[1]
+CURRENT_DIR_NAME: str = os.path.basename(UNIX_CWD)
 
 
 @click.command
-@click.option(
-    "--cov", is_flag=True, default=False, help="Generate coverage report"
-)
 @click.option(
     "--verbose",
     "-v",
@@ -46,55 +39,26 @@ CURRENT_DIR_NAME: str = os.path.split(UNIX_CWD)[1]
     default=False,
     help="Print verbose debug messages",
 )
-@click.option("--color/--no-color", default=True, help="Colorful output")
-def main(cov: bool, verbose: bool, color: bool) -> int:
-    log.initialize("DEBUG" if verbose else "INFO", color)
+def main(verbose: bool) -> None:
+    logging.basicConfig(level="DEBUG" if verbose else "INFO")
+
     # Search test files
     test_files: List[str] = []
-
-    for path, _, files in os.walk("."):
+    for path, _, files in os.walk("src/PyCompatibility"):
         for file in files:
+            this_file: str = os.path.normpath(f"{path}/{file}").replace(
+                "\\", "/"
+            )
             if TEST_FILE.fullmatch(file) is not None:
-                test_files.append(
-                    f"{path}/{file}".replace("\\", "/").replace("./", "")
-                )
+                test_files.append(this_file)
     # TODO: Use `f"{'\n'.format(...)}"` instead after EOL: Python 3.11
+
     LOG.debug("Found these test files:\n{}".format("\n".join(test_files)))
 
-    test_files_in_parent_dir: List[str] = [
-        f"{CURRENT_DIR_NAME}/{test_file}" for test_file in test_files
-    ]
-    if cov:
-        command = [
-            "coverage",
-            "run",
-            "--source",
-            CURRENT_DIR_NAME,
-            "--data-file",
-            f"{CURRENT_DIR_NAME}/.coverage",
-            "--rcfile",
-            f"{CURRENT_DIR_NAME}/.coveragerc",
-            "-m",
-            "unittest",
-            *test_files_in_parent_dir,
-            "--verbose",
-        ]
-    else:
-        command = [
-            "python",
-            "-m",
-            "unittest",
-            *test_files_in_parent_dir,
-            "--verbose",
-        ]
-    LOG.debug(
-        f"Using command(in cwd {os.path.split(UNIX_CWD)[0]}):\n"
-        f"{shlex.join(command)}"
+    unittest.main(
+        module=None, argv=[__file__, *test_files], verbosity=2, tb_locals=True
     )
-
-    exitcode = subprocess.run(command, cwd="../").returncode
-    return exitcode
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
