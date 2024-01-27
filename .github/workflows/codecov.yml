@@ -37,7 +37,7 @@ jobs:
 
     - name: Generate coverage report
       run: |
-        python run_tests.py --verbose --cov --no-color
+        coverage run run_tests.py --verbose
         coverage xml
 
     - name: Upload coverage report
