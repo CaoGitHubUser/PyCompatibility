@@ -17,24 +17,26 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import importlib.metadata
 import logging
 from pathlib import Path
 from typing import Any, Callable, cast, Optional, Set, Tuple
 
 import click
 
+# TODO: Use importlib.metadata instead of importlib_metadata after EOL: Python 3.11
+import importlib_metadata
+
 from . import log
 from .configuration import CheckConfiguration
 
-__version__: str = importlib.metadata.version("PyCompatibility")
+__version__: str = importlib_metadata.version("PyCompatibility")
 __license_file__: str = (
-    importlib.metadata.metadata("PyCompatibility").get("License-File")
+    importlib_metadata.metadata("PyCompatibility").get("License-File")
     or "COPYING"
 )
 __license__: str = cast(
     Callable[[str], str],
-    importlib.metadata.distribution("PyCompatibility").read_text,
+    importlib_metadata.distribution("PyCompatibility").read_text,
 )(__license_file__)
 
 LOG: logging.Logger = logging.getLogger("CLI")
