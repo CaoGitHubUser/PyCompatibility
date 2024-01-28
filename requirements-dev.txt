@@ -5,4 +5,8 @@
 # notice and this notice are preserved.  This file is offered as-is,
 # without any warranty.
 
+build
+# coverage measurement
 coverage
+# Build & Release
+twine

@@ -1,0 +1,42 @@
+# GitHub workflow to release a version.
+#
+# Copying and distribution of this file, with or without modification,
+# are permitted in any medium without royalty provided the copyright
+# notice and this notice are preserved.  This file is offered as-is,
+# without any warranty.
+
+name: release
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        python_version: ["3.8", "pypy3.8", "3.9", "pypy3.9", "3.10", "pypy3.10", "3.11", "3.12"]
+        os: ["windows-latest", "macos-latest", "ubuntu-latest"]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/setup-python@main
+      with:
+        python-version: ${{ matrix.python_version }}
+
+    - uses: actions/checkout@main
+
+    - name: Install dependencies
+      run: pip install requirements-dev.txt
+
+    - name: Check README rendering
+      run: twine check dist/*
+
+    - name: Build & Upload
+      run: |
+        python -m build
+        twine upload dist/*
+      env:
+        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
