@@ -39,7 +39,7 @@ classifiers = [
     "Topic :: Software Development",
     "Typing :: Typed"
 ]
-dependencies = ["click", "tomli", "tomli-w"]
+dependencies = ["click", "tomli", "tomli-w", "importlib-metadata"]
 description = "a static Python version compatibility checker"
 keywords = ["python", "python3", "compatibility-testing", "static-checks"]
 readme = "README.md"

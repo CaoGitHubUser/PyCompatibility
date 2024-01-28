@@ -54,6 +54,7 @@ repos:
           - click
           - tomli
           - tomli-w
+          - importlib-metadata
 
   - repo: https://github.com/PyCQA/flake8
     rev: 7.0.0
