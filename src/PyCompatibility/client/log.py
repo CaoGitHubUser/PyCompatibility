@@ -132,9 +132,11 @@ def initialize(
         return
     logging.addLevelName(SUCCESS, "SUCCESS")
     logging.basicConfig(
-        handlers=(ColoredStreamHandler(stream=stream),)
-        if enable_color and color_support
-        else (FormattedStreamHandler(stream=stream),),
+        handlers=(
+            (ColoredStreamHandler(stream=stream),)
+            if enable_color and color_support
+            else (FormattedStreamHandler(stream=stream),)
+        ),
         level=log_level,
     )
     _initialized = True
