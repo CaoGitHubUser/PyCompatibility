@@ -30,12 +30,10 @@ jobs:
     - name: Install dependencies
       run: pip install requirements-dev.txt
 
-    - name: Check README rendering
-      run: twine check dist/*
-
-    - name: Build & Upload
+    - name: Build & Check & Upload
       run: |
         python -m build
+        twine check dist/*
         twine upload dist/*
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
